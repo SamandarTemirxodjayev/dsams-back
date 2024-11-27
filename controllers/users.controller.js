@@ -16,6 +16,12 @@ const Applications = require("../models/Applications");
 exports.loginOrRegsiter = async (req, res) => {
 	try {
 		const {email} = req.body;
+		if (!email) {
+			return res.status(500).json({
+				status: false,
+				message: "Please enter email",
+			});
+		}
 		let confirmationw = await Confirmations.findOne({data: email});
 
 		if (confirmationw) {
