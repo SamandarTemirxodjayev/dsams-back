@@ -24,6 +24,12 @@ router.get("/sektors/:id", middleware, controller.getSektorById);
 router.put("/sektors/:id", middleware, controller.editSektorById);
 router.delete("/sektors/:id", middleware, controller.deleteSektorById);
 
+router.post("/sections", middleware, controller.createSection);
+router.get("/sections", middleware, controller.getSections);
+router.get("/sections/:id", middleware, controller.getSektorById);
+router.put("/sections/:id", middleware, controller.editSektorById);
+router.delete("/sections/:id", middleware, controller.deleteSektorById);
+
 router.post("/standarts", middleware, controller.createStandart);
 router.get("/standarts", middleware, controller.getStandarts);
 router.get("/standarts/:id", middleware, controller.getStandartById);

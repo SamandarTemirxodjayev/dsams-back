@@ -12,6 +12,7 @@ const fs = require("fs/promises");
 const Standarts = require("../models/Standarts");
 const Sektors = require("../models/Sektors");
 const Applications = require("../models/Applications");
+const Sections = require("../models/Sections");
 
 exports.loginOrRegsiter = async (req, res) => {
 	try {
@@ -244,15 +245,11 @@ exports.getStandarts = async (req, res) => {
 		page = parseInt(page);
 		limit = parseInt(limit);
 		const skip = (page - 1) * limit;
-		let standarts = await Standarts.find()
-			.skip(skip)
-			.limit(limit)
-			.populate("sektor");
+		let standarts = await Standarts.find().skip(skip).limit(limit);
 		const total = await Standarts.countDocuments();
 		standarts = modifyResponseByLang(standarts, lang, [
 			"short_description",
 			"description",
-			"sektor.name",
 			"questions.title",
 			"questions.description",
 		]);
@@ -277,7 +274,7 @@ exports.getStandarts = async (req, res) => {
 exports.getStandartById = async (req, res) => {
 	try {
 		let {lang} = req.query;
-		let standart = await Standarts.findById(req.params.id).populate("sektor");
+		let standart = await Standarts.findById(req.params.id);
 		if (!standart) {
 			return res.status(404).json({
 				status: false,
@@ -288,7 +285,6 @@ exports.getStandartById = async (req, res) => {
 		standart = modifyResponseByLang(standart, lang, [
 			"short_description",
 			"description",
-			"sektor.name",
 			"questions.title",
 			"questions.description",
 		]);
@@ -319,12 +315,11 @@ exports.searchStandarts = async (req, res) => {
 
 		let standarts = await Standarts.find({
 			name: {$regex: text, $options: "i"},
-		}).populate("sektor");
+		});
 
 		standarts = modifyResponseByLang(standarts, lang, [
 			"short_description",
 			"description",
-			"sektor.name",
 			"questions.title",
 			"questions.description",
 		]);
@@ -350,13 +345,11 @@ exports.getStandartBySektorId = async (req, res) => {
 		const skip = (page - 1) * limit;
 		let standarts = await Standarts.find({sektor: req.params.id})
 			.skip(skip)
-			.limit(limit)
-			.populate("sektor");
+			.limit(limit);
 		const total = await Standarts.countDocuments({sektor: req.params.id});
 		standarts = modifyResponseByLang(standarts, lang, [
 			"short_description",
 			"description",
-			"sektor.name",
 			"questions.title",
 			"questions.description",
 		]);
@@ -390,25 +383,20 @@ exports.getSektors = async (req, res) => {
 			{$limit: limit},
 			{
 				$lookup: {
-					from: "standarts",
+					from: "sections",
 					localField: "_id",
 					foreignField: "sektor",
-					as: "standarts",
+					as: "sections",
 				},
 			},
 		]);
 
 		const total = await Sektors.countDocuments();
 
-		const modifiedSektors = sektors.map((sektor) => {
-			const modifiedSektor = modifyResponseByLang([sektor], lang, ["name"])[0];
-			modifiedSektor.standarts = modifyResponseByLang(sektor.standarts, lang, [
-				"name",
-				"short_description",
-				"description",
-			]);
-			return modifiedSektor;
-		});
+		const modifiedSektors = modifyResponseByLang(sektors, lang, [
+			"name",
+			"sections.name",
+		]);
 
 		const response = paginate(
 			page,
@@ -433,38 +421,32 @@ exports.getSektorById = async (req, res) => {
 		const {lang} = req.query;
 		const {id} = req.params;
 
-		// Use aggregation to find the specific Sektor and include associated Standarts
-		const sektorData = await Sektors.aggregate([
-			{$match: {_id: parseInt(id)}},
-			{
-				$lookup: {
-					from: "standarts",
-					localField: "_id",
-					foreignField: "sektor",
-					as: "standarts",
-				},
-			},
-		]);
-
-		if (!sektorData.length) {
+		// Find the sektor by ID
+		let sektor = await Sektors.findById(id);
+		if (!sektor) {
 			return res.status(404).json({
 				status: false,
 				message: "Sektor not found",
-				data: null,
 			});
 		}
 
-		let sektor = modifyResponseByLang(sektorData, lang, ["name"])[0];
-		sektor.standarts = modifyResponseByLang(sektor.standarts, lang, [
-			"name",
-			"short_description",
-			"description",
-		]);
+		// Modify the sektor response based on language
+		sektor = modifyResponseByLang(sektor, lang, ["name"]);
 
+		// Find sections associated with the sektor ID
+		const sections = await Sections.find({sektor: id});
+		const modifiedSections = sections.map((section) =>
+			modifyResponseByLang(section, lang, ["name"]),
+		);
+
+		// Return response
 		return res.json({
 			status: true,
 			message: "Success",
-			data: sektor,
+			data: {
+				sektor,
+				sections: modifiedSections,
+			},
 		});
 	} catch (error) {
 		console.log(error);
@@ -486,7 +468,7 @@ exports.searchSektors = async (req, res) => {
 		}
 
 		// Use aggregation to search sectors and include associated standards
-		const sektors = await Sektors.aggregate([
+		let sektors = await Sektors.aggregate([
 			{
 				$match: {
 					$or: [
@@ -498,32 +480,84 @@ exports.searchSektors = async (req, res) => {
 			},
 			{
 				$lookup: {
-					from: "standarts",
+					from: "sections",
 					localField: "_id",
 					foreignField: "sektor",
-					as: "standarts",
+					as: "sections",
 				},
 			},
 		]);
 
 		// Modify the sektor data and associated standarts based on the language
-		const modifiedSektors = sektors.map((sektor) => {
-			const modifiedSektor = modifyResponseByLang([sektor], lang, ["name"])[0];
-			modifiedSektor.standarts = modifyResponseByLang(sektor.standarts, lang, [
-				"name",
-				"short_description",
-				"description",
-			]);
-			return modifiedSektor;
-		});
+		sektors = modifyResponseByLang(sektors, lang, ["name", "sections.name"]);
 
 		return res.json({
 			status: true,
 			message: "Success",
-			data: modifiedSektors,
+			data: sektors,
 		});
 	} catch (error) {
 		console.error(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getSections = async (req, res) => {
+	try {
+		let {page = 1, limit = 10, lang} = req.query;
+		page = parseInt(page);
+		limit = parseInt(limit);
+		const skip = (page - 1) * limit;
+
+		const sektors = await Sections.find()
+			.skip(skip)
+			.limit(limit)
+			.populate("sektor");
+
+		const total = await Sections.countDocuments();
+
+		const modifiedSektor = modifyResponseByLang(sektors, lang, [
+			"name",
+			"sektor.name",
+		]);
+
+		const response = paginate(
+			page,
+			limit,
+			total,
+			modifiedSektor,
+			req.baseUrl,
+			req.path,
+		);
+
+		return res.json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getSectionById = async (req, res) => {
+	try {
+		const {lang} = req.query;
+		const {id} = req.params;
+
+		// Use aggregation to find the specific Sektor and include associated Standarts
+		let section = await Sections.findById(id).populate("sektor");
+
+		section = modifyResponseByLang(section, lang, ["name", "sektor.name"]);
+
+		return res.json({
+			status: true,
+			message: "Success",
+			data: section,
+		});
+	} catch (error) {
+		console.log(error);
 		return res.status(500).json({
 			status: false,
 			message: error.message,

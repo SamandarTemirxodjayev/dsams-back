@@ -5,7 +5,8 @@
 	"main": "index.js",
 	"scripts": {
 		"dev": "nodemon index.js",
-		"cdn": "nodemon ./cdn/index.js"
+		"cdn": "nodemon ./cdn/index.js",
+		"prod": "node index.js"
 	},
 	"keywords": [],
 	"author": "",

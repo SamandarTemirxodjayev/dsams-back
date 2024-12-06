@@ -9,6 +9,7 @@ const fs = require("fs/promises");
 const Sektors = require("../models/Sektors");
 const Standarts = require("../models/Standarts");
 const Applications = require("../models/Applications");
+const Sections = require("../models/Sections");
 
 exports.register = async (req, res) => {
 	try {
@@ -434,6 +435,129 @@ exports.deleteSektorById = async (req, res) => {
 			status: true,
 			message: "Success deleted",
 			data: sektor,
+		});
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.createSection = async (req, res) => {
+	try {
+		const section = await Sections.create(req.body);
+		return res.json({
+			status: true,
+			message: "sektor created",
+			data: section,
+		});
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getSections = async (req, res) => {
+	try {
+		let {page = 1, limit = 10, lang} = req.query;
+		page = parseInt(page);
+		limit = parseInt(limit);
+		const skip = (page - 1) * limit;
+		let sections = await Sections.find()
+			.skip(skip)
+			.limit(limit)
+			.populate("sektor");
+		const total = await Sections.countDocuments();
+		sections = modifyResponseByLang(sections, lang, ["name", "sektor.name"]);
+		const response = paginate(
+			page,
+			limit,
+			total,
+			sections,
+			req.baseUrl,
+			req.path,
+		);
+
+		return res.json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getSektorById = async (req, res) => {
+	try {
+		let {lang} = req.query;
+		let section = await Sections.findById(req.params.id).populate("sektor");
+		if (!section) {
+			return res.status(404).json({
+				status: false,
+				message: "section is not found",
+				data: null,
+			});
+		}
+		section = modifyResponseByLang(section, lang, ["name", "sektor.name"]);
+
+		return res.json({
+			status: true,
+			message: "Success",
+			data: section,
+		});
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.editSektorById = async (req, res) => {
+	try {
+		let section = await Sections.findByIdAndUpdate(req.params.id, req.body, {
+			new: true,
+		});
+
+		if (!section) {
+			return res.status(404).json({
+				status: false,
+				message: "section is not found",
+				data: null,
+			});
+		}
+
+		return res.json({
+			status: true,
+			message: "Success",
+			data: section,
+		});
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.deleteSektorById = async (req, res) => {
+	try {
+		let section = await Sections.findByIdAndDelete(req.params.id);
+		if (!section) {
+			return res.status(404).json({
+				status: false,
+				message: "section is not found",
+				data: null,
+			});
+		}
+
+		return res.json({
+			status: true,
+			message: "Success deleted",
+			data: section,
 		});
 	} catch (error) {
 		console.log(error);

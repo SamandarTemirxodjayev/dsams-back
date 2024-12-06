@@ -42,11 +42,6 @@ const schema = new Schema(
 			type: Number,
 			required: true,
 		},
-		sektor: {
-			type: Number,
-			required: true,
-			ref: "sektors",
-		},
 		questions: [
 			{
 				title_uz: {

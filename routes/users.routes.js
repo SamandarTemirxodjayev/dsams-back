@@ -17,11 +17,13 @@ router.get("/about", controller.getAbout);
 router.get("/standarts", controller.getStandarts);
 router.get("/standarts/search", controller.searchStandarts);
 router.get("/standarts/:id", controller.getStandartById);
-router.patch("/standarts/:id", controller.getStandartBySektorId);
 
 router.get("/sektors", controller.getSektors);
 router.get("/sektors/search", controller.searchSektors);
 router.get("/sektors/:id", controller.getSektorById);
+
+router.get("/sections", controller.getSections);
+router.get("/sections/:id", controller.getSectionById);
 
 router.post("/application", middleware, controller.createApplication);
 
