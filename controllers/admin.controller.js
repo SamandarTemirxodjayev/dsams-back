@@ -10,6 +10,7 @@ const Sektors = require("../models/Sektors");
 const Standarts = require("../models/Standarts");
 const Applications = require("../models/Applications");
 const Sections = require("../models/Sections");
+const About = require("../models/About");
 
 exports.register = async (req, res) => {
 	try {
@@ -221,48 +222,36 @@ exports.deleteBlogById = async (req, res) => {
 	}
 };
 exports.getAbout = async (req, res) => {
-	let {lang} = req.query;
-	const filePath = path.join(__dirname, "../database", `about.json`);
+	const {lang} = req.query;
+
 	try {
-		let filehandle = await open(filePath, "r");
-		let data = "";
-		for await (const line of filehandle.readLines()) {
-			data += line;
+		let about = await About.findOne();
+
+		if (!about) {
+			return res.status(404).json({
+				status: false,
+				message: "About data not found",
+			});
 		}
-		data = modifyResponseByLang(JSON.parse(data), lang, [
-			"title",
-			"description",
-		]);
+
+		about = modifyResponseByLang(about, lang, ["title", "description"]);
+
 		return res.json({
 			status: true,
 			message: "success",
-			data,
+			data: about,
 		});
 	} catch (error) {
-		console.log(error);
+		console.error(error);
 		return res.status(500).json({
 			status: false,
 			message: error.message,
 		});
 	}
 };
+
 exports.updateAbout = async (req, res) => {
-	const filePath = path.join(__dirname, "../database", "about.json");
-
 	try {
-		// Read the existing file content
-		let fileContent;
-		try {
-			fileContent = await fs.readFile(filePath, "utf8");
-		} catch (err) {
-			// If file doesn't exist, initialize it as an empty array
-			fileContent = "[]";
-		}
-
-		// Parse the JSON content
-		let linksData = JSON.parse(fileContent);
-
-		// Extract the updated value from the request body
 		const {
 			title_uz,
 			title_ru,
@@ -273,28 +262,21 @@ exports.updateAbout = async (req, res) => {
 			photo_url,
 		} = req.body;
 
-		// Get the current timestamp for `updatedAt`
-		const updatedAt = Date.now();
+		// Find the existing about document or create a new one
+		let about = await About.findOne();
 
-		// If data exists, update the first record, otherwise create a new one
-		if (linksData.length > 0) {
-			let currentLinks = linksData[0];
-
-			// Update the field and timestamp
-			currentLinks.title_uz = title_uz;
-			currentLinks.title_ru = title_ru;
-			currentLinks.title_en = title_en;
-			currentLinks.description_uz = description_uz;
-			currentLinks.description_ru = description_ru;
-			currentLinks.description_en = description_en;
-			currentLinks.photo_url = photo_url;
-			currentLinks.updatedAt = updatedAt;
-
-			// Save the updated data back
-			linksData[0] = currentLinks;
+		if (about) {
+			// Update existing document
+			about.title_uz = title_uz;
+			about.title_ru = title_ru;
+			about.title_en = title_en;
+			about.description_uz = description_uz;
+			about.description_ru = description_ru;
+			about.description_en = description_en;
+			about.photo_url = photo_url;
 		} else {
-			// If no data exists, create a new entry
-			linksData.push({
+			// Create new document
+			about = new About({
 				title_uz,
 				title_ru,
 				title_en,
@@ -302,21 +284,18 @@ exports.updateAbout = async (req, res) => {
 				description_ru,
 				description_en,
 				photo_url,
-				updatedAt,
 			});
 		}
 
-		// Write the updated content back to the file
-		await fs.writeFile(filePath, JSON.stringify(linksData, null, 2), "utf8");
+		await about.save();
 
-		// Respond with success
 		return res.json({
 			status: true,
-			message: "`about` updated successfully",
-			data: linksData,
+			message: "About updated successfully",
+			data: about,
 		});
 	} catch (error) {
-		console.error("Error updating links:", error);
+		console.error("Error updating about:", error);
 		return res.status(500).json({
 			status: false,
 			message: error.message,
@@ -490,7 +469,7 @@ exports.getSections = async (req, res) => {
 		});
 	}
 };
-exports.getSektorById = async (req, res) => {
+exports.getSectionById = async (req, res) => {
 	try {
 		let {lang} = req.query;
 		let section = await Sections.findById(req.params.id).populate("sektor");
@@ -516,7 +495,7 @@ exports.getSektorById = async (req, res) => {
 		});
 	}
 };
-exports.editSektorById = async (req, res) => {
+exports.editSectionById = async (req, res) => {
 	try {
 		let section = await Sections.findByIdAndUpdate(req.params.id, req.body, {
 			new: true,
@@ -543,7 +522,7 @@ exports.editSektorById = async (req, res) => {
 		});
 	}
 };
-exports.deleteSektorById = async (req, res) => {
+exports.deleteSectionById = async (req, res) => {
 	try {
 		let section = await Sections.findByIdAndDelete(req.params.id);
 		if (!section) {
@@ -733,6 +712,37 @@ exports.getApplications = async (req, res) => {
 		);
 
 		return res.json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getApplicationById = async (req, res) => {
+	try {
+		let {lang} = req.query;
+		let application = await Applications.findById(req.params.id)
+			.populate("experts.main.id")
+			.populate("experts.secondary.id")
+			.populate("sektor")
+			.populate("standart")
+			.populate("user");
+
+		application = modifyResponseByLang(application, lang, [
+			"sektor.name",
+			"standart.short_description",
+			"standart.description",
+			"standart.questions.title",
+			"standart.questions.description",
+		]);
+
+		return res.json({
+			status: true,
+			message: "success",
+			data: application,
+		});
 	} catch (error) {
 		console.log(error);
 		return res.status(500).json({

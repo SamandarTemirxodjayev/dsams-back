@@ -26,5 +26,10 @@ router.get("/sections", controller.getSections);
 router.get("/sections/:id", controller.getSectionById);
 
 router.post("/application", middleware, controller.createApplication);
+router.get("/applications", middleware, controller.getApplications);
+router.get("/experts", middleware, controller.getExperts);
+
+router.get("/tashkilots", middleware, controller.getAllApplications);
+router.get("/tashkilots/search", middleware, controller.getAllApplicationsSearch);
 
 module.exports = router;

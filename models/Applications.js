@@ -120,6 +120,11 @@ const schema = new Schema(
 			ref: "sektors",
 			required: true,
 		},
+		sections: {
+			type: Array,
+			ref: "sections",
+			required: true,
+		},
 		standart: {
 			type: Number,
 			ref: "standarts",

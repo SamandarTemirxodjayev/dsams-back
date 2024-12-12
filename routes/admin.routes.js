@@ -26,9 +26,9 @@ router.delete("/sektors/:id", middleware, controller.deleteSektorById);
 
 router.post("/sections", middleware, controller.createSection);
 router.get("/sections", middleware, controller.getSections);
-router.get("/sections/:id", middleware, controller.getSektorById);
-router.put("/sections/:id", middleware, controller.editSektorById);
-router.delete("/sections/:id", middleware, controller.deleteSektorById);
+router.get("/sections/:id", middleware, controller.getSectionById);
+router.put("/sections/:id", middleware, controller.editSectionById);
+router.delete("/sections/:id", middleware, controller.deleteSectionById);
 
 router.post("/standarts", middleware, controller.createStandart);
 router.get("/standarts", middleware, controller.getStandarts);
@@ -37,6 +37,7 @@ router.put("/standarts/:id", middleware, controller.editStandartById);
 router.delete("/standarts/:id", middleware, controller.deleteStandartById);
 
 router.get("/applications", middleware, controller.getApplications);
+router.get("/applications/:id", middleware, controller.getApplicationById);
 router.patch(
 	"/applications/cancel/:id",
 	middleware,

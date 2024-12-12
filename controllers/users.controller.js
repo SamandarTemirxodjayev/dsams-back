@@ -13,6 +13,8 @@ const Standarts = require("../models/Standarts");
 const Sektors = require("../models/Sektors");
 const Applications = require("../models/Applications");
 const Sections = require("../models/Sections");
+const Experts = require("../models/Experts");
+const About = require("../models/About");
 
 exports.loginOrRegsiter = async (req, res) => {
 	try {
@@ -214,25 +216,27 @@ exports.getBlogById = async (req, res) => {
 };
 
 exports.getAbout = async (req, res) => {
-	let {lang} = req.query;
-	const filePath = path.join(__dirname, "../database", `about.json`);
+	const {lang} = req.query;
+
 	try {
-		let filehandle = await open(filePath, "r");
-		let data = "";
-		for await (const line of filehandle.readLines()) {
-			data += line;
+		let about = await About.findOne();
+
+		if (!about) {
+			return res.status(404).json({
+				status: false,
+				message: "About data not found",
+			});
 		}
-		data = modifyResponseByLang(JSON.parse(data), lang, [
-			"title",
-			"description",
-		]);
+
+		about = modifyResponseByLang(about, lang, ["title", "description"]);
+
 		return res.json({
 			status: true,
 			message: "success",
-			data,
+			data: about,
 		});
 	} catch (error) {
-		console.log(error);
+		console.error(error);
 		return res.status(500).json({
 			status: false,
 			message: error.message,
@@ -574,6 +578,162 @@ exports.createApplication = async (req, res) => {
 			status: true,
 			message: "Success",
 			data: application,
+		});
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getApplications = async (req, res) => {
+	try {
+		let {page = 1, limit = 10, filter = {}, lang} = req.query;
+		page = parseInt(page);
+		limit = parseInt(limit);
+		const skip = (page - 1) * limit;
+
+		let applications = await Applications.find({...filter, user: req.user._id})
+			.skip(skip)
+			.limit(limit)
+			.populate("experts.main.id")
+			.populate("experts.secondary.id")
+			.populate("sektor")
+			.populate("standart")
+			.populate("user");
+
+		const total = await Applications.countDocuments({
+			...filter,
+			user: req.user._id,
+		});
+
+		applications = modifyResponseByLang(applications, lang, [
+			"sektor.name",
+			"standart.short_description",
+			"standart.description",
+			"standart.questions.title",
+			"standart.questions.description",
+		]);
+		const response = paginate(
+			page,
+			limit,
+			total,
+			applications,
+			req.baseUrl,
+			req.path,
+		);
+
+		return res.json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getExperts = async (req, res) => {
+	try {
+		let {page = 1, limit = 10} = req.query;
+		page = parseInt(page);
+		limit = parseInt(limit);
+		const skip = (page - 1) * limit;
+		let experts = await Experts.find().skip(skip).limit(limit);
+		const total = await Experts.countDocuments();
+		const response = paginate(
+			page,
+			limit,
+			total,
+			experts,
+			req.baseUrl,
+			req.path,
+		);
+
+		return res.json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getAllApplications = async (req, res) => {
+	try {
+		let {page = 1, limit = 10, filter = {}, lang} = req.query;
+		page = parseInt(page);
+		limit = parseInt(limit);
+		const skip = (page - 1) * limit;
+
+		let applications = await Applications.find({...filter})
+			.skip(skip)
+			.limit(limit)
+			.populate("experts.main.id")
+			.populate("experts.secondary.id")
+			.populate("sektor")
+			.populate("standart")
+			.populate("user");
+
+		const total = await Applications.countDocuments({...filter});
+
+		applications = modifyResponseByLang(applications, lang, [
+			"sektor.name",
+			"standart.short_description",
+			"standart.description",
+			"standart.questions.title",
+			"standart.questions.description",
+		]);
+		const response = paginate(
+			page,
+			limit,
+			total,
+			applications,
+			req.baseUrl,
+			req.path,
+		);
+
+		return res.json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({
+			status: false,
+			message: error.message,
+		});
+	}
+};
+exports.getAllApplicationsSearch = async (req, res) => {
+	try {
+		const {text, lang} = req.query;
+
+		if (!text) {
+			return res.status(400).json({
+				status: false,
+				message: "Search query is required",
+			});
+		}
+
+		let applications = await Applications.find({
+			"company.name": {$regex: text, $options: "i"},
+		})
+			.populate("experts.main.id")
+			.populate("experts.secondary.id")
+			.populate("sektor")
+			.populate("standart")
+			.populate("user");
+
+		applications = modifyResponseByLang(applications, lang, [
+			"sektor.name",
+			"standart.short_description",
+			"standart.description",
+			"standart.questions.title",
+			"standart.questions.description",
+		]);
+
+		return res.json({
+			status: true,
+			message: "success",
+			data: applications,
 		});
 	} catch (error) {
 		console.error(error);
