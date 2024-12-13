@@ -571,7 +571,6 @@ exports.getStandarts = async (req, res) => {
 		let standarts = await Standarts.find()
 			.skip(skip)
 			.limit(limit)
-			.populate("sektor");
 		const total = await Standarts.countDocuments();
 		standarts = modifyResponseByLang(standarts, lang, [
 			"short_description",
