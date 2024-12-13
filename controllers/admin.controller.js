@@ -441,15 +441,15 @@ exports.createSection = async (req, res) => {
 };
 exports.getSections = async (req, res) => {
 	try {
-		let {page = 1, limit = 10, lang} = req.query;
+		let {page = 1, limit = 10, lang, filter = {}} = req.query;
 		page = parseInt(page);
 		limit = parseInt(limit);
 		const skip = (page - 1) * limit;
-		let sections = await Sections.find()
+		let sections = await Sections.find({...filter})
 			.skip(skip)
 			.limit(limit)
 			.populate("sektor");
-		const total = await Sections.countDocuments();
+		const total = await Sections.countDocuments({...filter});
 		sections = modifyResponseByLang(sections, lang, ["name", "sektor.name"]);
 		const response = paginate(
 			page,
@@ -568,9 +568,7 @@ exports.getStandarts = async (req, res) => {
 		page = parseInt(page);
 		limit = parseInt(limit);
 		const skip = (page - 1) * limit;
-		let standarts = await Standarts.find()
-			.skip(skip)
-			.limit(limit)
+		let standarts = await Standarts.find().skip(skip).limit(limit);
 		const total = await Standarts.countDocuments();
 		standarts = modifyResponseByLang(standarts, lang, [
 			"short_description",
