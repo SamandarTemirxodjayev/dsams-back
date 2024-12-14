@@ -22,6 +22,10 @@ const schema = new Schema(
 							type: Number,
 							required: true,
 						},
+						status: {
+							type: Boolean,
+							default: true,
+						},
 						answer_id: {
 							type: Types.ObjectId,
 							required: true,
@@ -40,6 +44,10 @@ const schema = new Schema(
 							ball: {
 								type: Number,
 								required: true,
+							},
+							status: {
+								type: Boolean,
+								default: true,
 							},
 							answer_id: {
 								type: Types.ObjectId,

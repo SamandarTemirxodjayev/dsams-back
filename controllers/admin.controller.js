@@ -573,7 +573,6 @@ exports.getStandarts = async (req, res) => {
 		standarts = modifyResponseByLang(standarts, lang, [
 			"short_description",
 			"description",
-			"sektor.name",
 		]);
 		const response = paginate(
 			page,
@@ -596,7 +595,7 @@ exports.getStandarts = async (req, res) => {
 exports.getStandartById = async (req, res) => {
 	try {
 		let {lang} = req.query;
-		let standart = await Standarts.findById(req.params.id).populate("sektor");
+		let standart = await Standarts.findById(req.params.id);
 		if (!standart) {
 			return res.status(404).json({
 				status: false,
@@ -607,7 +606,6 @@ exports.getStandartById = async (req, res) => {
 		standart = modifyResponseByLang(standart, lang, [
 			"short_description",
 			"description",
-			"sektor.name",
 		]);
 
 		return res.json({
