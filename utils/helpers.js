@@ -1,4 +1,10 @@
 const Counter = require("../models/Counter");
+const {ACCEPTED_LANGS} = require("./constants");
+const {
+	getNestedValue,
+	setNestedValue,
+	cleanupLangFields,
+} = require("./objectUtils");
 exports.AutoIncrement = function (schema, options) {
 	const {modelName, fieldName, startAt = 1} = options; // Added startAt with a default value
 
