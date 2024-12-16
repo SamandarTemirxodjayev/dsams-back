@@ -31,64 +31,100 @@ exports.AutoIncrement = function (schema, options) {
 		}
 	});
 };
-exports.modifyResponseByLang = (data, lang, keys = []) => {
-	const acceptedLangs = ["uz", "ru", "en"];
+const processNestedObject = (obj, lang, baseKey) => {
+	if (!obj) return;
 
-	const mapObjectByLang = (obj) => {
-		// Convert the document into a plain object if it's a Mongoose document
-		const modifiedObj = JSON.parse(JSON.stringify(obj));
+	// Handle direct language fields
+	const langValue = obj[`${baseKey}_${lang}`];
+	if (langValue !== undefined) {
+		obj[baseKey] = langValue;
+		cleanupLangFields(obj, baseKey);
+	}
 
-		// If lang is valid, map fields to specific language, else return all languages
-		if (acceptedLangs.includes(lang)) {
-			keys.forEach((key) => {
-				// Handle nested fields for populated data, like 'category.name'
-				const keyParts = key.split(".");
-				if (keyParts.length > 1) {
-					const [parentKey, childKey] = keyParts;
-					if (modifiedObj[parentKey]) {
-						if (Array.isArray(modifiedObj[parentKey])) {
-							// If it's an array, iterate over each item
-							modifiedObj[parentKey].forEach((item) => {
-								if (item && item[`${childKey}_${lang}`]) {
-									item[childKey] = item[`${childKey}_${lang}`];
-									// Delete other language-specific fields
-									delete item[`${childKey}_uz`];
-									delete item[`${childKey}_ru`];
-									delete item[`${childKey}_en`];
-								}
-							});
-						} else if (modifiedObj[parentKey][`${childKey}_${lang}`]) {
-							// If it's not an array, handle it as before
-							modifiedObj[parentKey][childKey] =
-								modifiedObj[parentKey][`${childKey}_${lang}`];
-							// Delete language-specific fields
-							delete modifiedObj[parentKey][`${childKey}_uz`];
-							delete modifiedObj[parentKey][`${childKey}_ru`];
-							delete modifiedObj[parentKey][`${childKey}_en`];
-						}
-					}
-				} else {
-					if (modifiedObj[`${key}_${lang}`]) {
-						// Assign the language-specific field
-						modifiedObj[key] = modifiedObj[`${key}_${lang}`];
-
-						// Delete other language-specific fields
-						delete modifiedObj[`${key}_uz`];
-						delete modifiedObj[`${key}_ru`];
-						delete modifiedObj[`${key}_en`];
-					}
+	// Process nested arrays
+	Object.keys(obj).forEach((key) => {
+		if (Array.isArray(obj[key])) {
+			obj[key].forEach((item) => {
+				if (item && typeof item === "object") {
+					processNestedObject(item, lang, baseKey);
 				}
 			});
+		} else if (obj[key] && typeof obj[key] === "object") {
+			processNestedObject(obj[key], lang, baseKey);
 		}
-		return modifiedObj;
+	});
+};
+
+const processField = (obj, key, lang) => {
+	if (!obj || !key || !lang) return;
+
+	const keyParts = key.split(".");
+	const baseKey = keyParts[keyParts.length - 1];
+	const parentPath = keyParts.slice(0, -1).join(".");
+
+	const processValue = (target) => {
+		if (!target) return;
+
+		if (Array.isArray(target)) {
+			target.forEach((item) => processValue(item));
+			return;
+		}
+
+		// Process the current level
+		const langValue = target[`${baseKey}_${lang}`];
+		if (langValue !== undefined) {
+			target[baseKey] = langValue;
+			cleanupLangFields(target, baseKey);
+		}
+
+		// Process all nested objects and arrays
+		Object.keys(target).forEach((targetKey) => {
+			const value = target[targetKey];
+			if (Array.isArray(value)) {
+				value.forEach((item) => {
+					if (item && typeof item === "object") {
+						processNestedObject(item, lang, baseKey);
+					}
+				});
+			} else if (value && typeof value === "object") {
+				processNestedObject(value, lang, baseKey);
+			}
+		});
 	};
 
-	// Handle arrays of objects or single objects
-	if (Array.isArray(data)) {
-		return data.map((item) => mapObjectByLang(item));
+	if (parentPath) {
+		const parents = getNestedValue(obj, parentPath);
+		if (Array.isArray(parents)) {
+			parents.forEach((parent) => processValue(parent));
+		} else if (parents) {
+			processValue(parents);
+		}
 	} else {
-		return mapObjectByLang(data);
+		processValue(obj);
 	}
+};
+
+const mapObjectByLang = (obj, lang, keys = []) => {
+	if (!obj || !lang || !Array.isArray(keys)) return obj;
+
+	const modifiedObj = JSON.parse(JSON.stringify(obj));
+
+	if (ACCEPTED_LANGS.includes(lang)) {
+		keys.forEach((key) => {
+			processField(modifiedObj, key, lang);
+		});
+	}
+
+	return modifiedObj;
+};
+
+exports.modifyResponseByLang = (data, lang, keys = []) => {
+	if (!data || !lang || !Array.isArray(keys)) return data;
+
+	if (Array.isArray(data)) {
+		return data.map((item) => mapObjectByLang(item, lang, keys));
+	}
+	return mapObjectByLang(data, lang, keys);
 };
 exports.paginate = (
 	page,
